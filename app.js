@@ -8,10 +8,6 @@ let boardSquares = () => {
         gameBoard.player.choice(gameBoard.player, square);
         gameBoard.turn += 1;
         gameBoard.checkBoard(gameBoard.player)
-            // if player wins 
-            // return "";
-        
-        
 
         gameBoard.computer.choice(gameBoard.computer, gameBoard.selectSquare());
         gameBoard.turn += 1;
@@ -29,19 +25,20 @@ let boardSquares = () => {
     return {fillSquare, activateSquares};
 }
 
-function rng(options) {
-
-}
-
 // selects an index then
 let gameAI = () => {
     let squares = document.querySelectorAll('.square');
-    let rng = "";
+    let empty = false;
+    let rng = (options) => {
+        let idx = Math.floor(Math.random() * options.length);
+        return squares[options[idx]];
+    }
 
     let twoXrow = () => {
         let result = -1;
+        let board = gameBoard.board;
+
         gameBoard.triplets.forEach((triplet) => {
-            let board = gameBoard.board;
             let a = triplet[0];
             let b = triplet[1];
             let c = triplet[2];
@@ -51,30 +48,40 @@ let gameAI = () => {
                   board[a] === 'X' && board[c] === 'X' ||
                   board[b] === 'X' && board[c] === 'X' ) &&
                   (board[a] === '' || board[b] === '' || board[c] === '')){
-                    // console.log('xxxxxxxxxxxxxxxx')
-                    // console.log(triplet)
                     let idx = row.indexOf('');
-                    // console.log('fill : ' + triplet[idx])
                     result = triplet[idx]; // becomes square.id   
                 }
             }
         )
         return result;
     }
+
+    let emptyCorner = () =>{
+        for (let i = 0; i < gameBoard.corners.length; i++){
+            if (gameBoard.board[gameBoard.corners[i]] === '') {
+                return true;
+            }
+        }
+        return false;
+    }
+
     let selectSquare = () => {
-        // console.log(twoXrow());
+
+        let block = twoXrow();
         if (squares[4].innerHTML === ''){
             result = squares[4];
         }
-        else if (twoXrow() >= 0){
-            result = squares[twoXrow()];
+        else if (block >= 0){
+            result = squares[block]; // not lucky
+        }
+        else if (emptyCorner()){
+            result = rng(gameBoard.corners);
         }
         else {
-            rng = Math.floor(Math.random() * gameBoard.freeSpots.length);
-            result = squares[rng];
+            result = rng(gameBoard.freeSpots);
         }
-        console.log(result)
-        if (gameBoard.gameOver === false){    
+
+        if (gameBoard.gameOver !== true){    
             result.removeEventListener('click', gameBoard.fillSquare);
             return result;
         }
@@ -86,11 +93,15 @@ let gameAI = () => {
 
 let Player = (name, letter, color) => {
     let board = new Array(9);
-    let declareWinner = () =>{
+    let declareWinner = (tie = 0) =>{
         container.appendChild(display);
-        textbox.innerHTML = `${name} has won the game!`
-
+        if (tie === 0){
+            textbox.innerHTML = `${name} has won the game!`
+        } else{
+            textbox.innerHTML = "It's a tie game!";
+        }
     }
+
     let choice = (self, square) => {
         if (gameBoard.gameOver === false){
             console.log(letter + " : " + square.id);
@@ -101,16 +112,17 @@ let Player = (name, letter, color) => {
             // remove this square from global freeSpots array
             let idx = gameBoard.freeSpots.indexOf(parseInt(square.id));
             gameBoard.freeSpots.splice(idx, 1);
-            }
+            if (square.id % 2 === 0 && square.id !== 4){ // is a corner
+                idx = gameBoard.corners.indexOf(parseInt(square.id));
+                gameBoard.corners.splice(idx, 1);
+            }  
+        }
     }
     board.fill('');
     return {name, letter, color, board, choice, declareWinner};
 }
 
 let gameFlow = () => {
-    
-    // introduce a check which passes each palyer to checkboard
- 
     
     let checkBoard = (side) => {
         let values = side.board;
@@ -120,15 +132,12 @@ let gameFlow = () => {
                 values[triplet[0]] !== ''){
                     gameBoard.gameOver = true;
                     side.declareWinner();
-                    // return true;
             }
             else if (gameBoard.turn === 9){
                 gameBoard.gameOver = true;
-                side.declareWinner();
-                // return true;
+                side.declareWinner(1);
             }
         });
-        // return false;
     }
     let reset = () => {
         if (gameBoard.gameOver){
@@ -137,10 +146,11 @@ let gameFlow = () => {
             })
             gameBoard.player = Player("Player", "X", "#ff494d");
             gameBoard.computer = Player("Computer", "O", "#2acaea");
-            gameBoard.freeSpots = [0,1,2,3,4,5,6,7,8]
+            gameBoard.board.fill('');
+            gameBoard.freeSpots = [0,1,2,3,4,5,6,7,8];
+            gameBoard.corners = [0,2,6,8];
             gameBoard.gameOver = false;
             gameBoard.turn = 0;
-            textbox.innerHTML = "";
             container.removeChild(display);
             gameBoard.activateSquares();
         }
