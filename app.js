@@ -3,30 +3,22 @@ let boardSquares = () => {
     let fillSquare = (e) => {
         let square = e.target;
         // how does this self reference actually work ? 
-        square.removeEventListener('click', fillSquare);
+        square.removeEventListener('click', gameBoard.fillSquare);
 
-        if (gameBoard.turn % 2 === 0){
-            square.innerHTML = 'X';
-            square.style.color = '#ff494d';
-            gameBoard.player.board[square.id] = 'X';
-        }
-        if (gameBoard.turn % 2 !== 0){
-            square.innerHTML = 'O';
-            square.style.color = '#2acaea';
-            gameBoard.computer.board[square.id] = 'O';
-        }
-
+        gameBoard.player.choice(gameBoard.player, square);
         gameBoard.turn += 1;
-
-        gameBoard.checkBoard(gameBoard.computer);
         gameBoard.checkBoard(gameBoard.player);
+
+        gameBoard.computer.choice(gameBoard.computer, gameAI());
+        gameBoard.turn += 1;
+        gameBoard.checkBoard(gameBoard.computer);
     }
 
     let activateSquares = () => {
         if (gameBoard.turn === 0){
             gameBoard.squares.forEach((square) => {
                 square.style.color = '#000';
-                square.addEventListener('click', fillSquare);
+                square.addEventListener('click', gameBoard.fillSquare);
             })
         }
     }
@@ -45,9 +37,10 @@ let gameFlow = () => {
         positions.forEach((triplet) => {
             if (values[triplet[0]] === values[triplet[1]] && 
                 values[triplet[0]] === values[triplet[2]] && 
-                values[triplet[0]] !== ""){
-                gameBoard.gameOver = true;
-                side.declareWinner();
+                values[triplet[0]] !== ''){
+                    console.log(values);
+                    gameBoard.gameOver = true;
+                    side.declareWinner();
             }
             else if (gameBoard.turn === 9){
                 gameBoard.gameOver = true;
@@ -59,30 +52,63 @@ let gameFlow = () => {
     return {checkBoard};
 }
 
-let Player = (name) => {
+// selects an index then
+function gameAI() {
+    let squares = document.querySelectorAll('.square');
+    let rng = Math.floor(Math.random() * gameBoard.freeSpots.length);
+    let result = squares[gameBoard.freeSpots[rng]];
+    result.removeEventListener('click', gameBoard.fillSquare);
+    return result;
+}
+
+function rng(options) {
+
+}
+
+let Player = (name, letter, color) => {
     let board = new Array(9);
     let declareWinner = () =>{
         container.appendChild(display);
         textbox.innerHTML = `${name} has won the game!`
 
     }
+    let choice = (self, square) => {
+        square.innerHTML = letter;
+        square.style.color = color;
+        self.board[square.id] = letter;
+        gameBoard.freeSpots.splice(square.id, 1);
+        console.log(gameBoard.freeSpots)
+
+    }
     board.fill('');
-    return {name, board, declareWinner};
+    return {name, letter, color, board, choice, declareWinner};
 }
 
 let gameBoard = (() => {
 
     let gameOver = false;
-    let player = Player("Player");
-    let computer = Player("Computer");
+    let freeSpots = [0,1,2,3,4,5,6,7,8];
+    let player = Player("Player", "X", "#ff494d");
+    let computer = Player("Computer", "O", "#2acaea");
     let turn = 0;
 
     let squares = document.querySelectorAll('.square');
+    let {fillSquare} = boardSquares();
     let {activateSquares} = boardSquares();    
     let {checkBoard} = gameFlow();
+    // let {gameAI} = gameAI();
     let {reset} = gameFlow();
 
-    return {gameOver, player, computer, turn, squares, reset, checkBoard, activateSquares};
+    return {gameOver, 
+            freeSpots,
+            player, 
+            computer, 
+            turn, 
+            squares, 
+            reset, 
+            checkBoard, 
+            activateSquares,
+            fillSquare};
 })();
 
 
@@ -101,10 +127,10 @@ again.addEventListener('click', () => {
     if (gameBoard.gameOver){
         gameBoard.squares.forEach((square) => {
             square.innerHTML = "";
-            gameBoard.player = Player("Player");
-            gameBoard.computer = Player("Computer");
         })
-        
+        gameBoard.player = Player("Player", "X", "#ff494d");
+        gameBoard.computer = Player("Computer", "O", "#2acaea");
+        gameBoard.freeSpots = [0,1,2,3,4,5,6,7,8]
         gameBoard.gameOver = false;
         gameBoard.turn = 0;
         textbox.innerHTML = "";
