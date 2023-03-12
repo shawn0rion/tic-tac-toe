@@ -1,37 +1,66 @@
-let boardSquares = () => {
+let Player = (name, letter, color) => {
+    let board = new Array(9);
+    let declareWinner = (tie = 0) =>{
+        container.appendChild(display);
+        if (tie === 0){
+            textbox.innerHTML = `${name} has won the game!`
+        } else{
+            textbox.innerHTML = "It's a tie game!";
+        }
+    }
+
+    let choice = (self, square) => {
+        if (gameBoard.gameOver === false){
+            console.log(letter + " : " + square.id);
+            square.innerHTML = letter;
+            square.style.color = color;
+            self.board[square.id] = letter;
+            gameBoard.board[square.id] = letter;
+            // remove this square from global freeSpots array
+            let idx = gameBoard.freeSpots.indexOf(parseInt(square.id));
+            gameBoard.freeSpots.splice(idx, 1);
+            if (square.id % 2 === 0 && square.id !== 4){ // is a corner
+                idx = gameBoard.corners.indexOf(parseInt(square.id));
+                gameBoard.corners.splice(idx, 1);
+            }  
+        }
+    }
+    board.fill('');
+    return {name, letter, color, board, choice, declareWinner};
+}
+
+let boardSquares = (() => {
 
     let fillSquare = (e) => {
         let square = e.target;
         // how does this self reference actually work ? 
-        square.removeEventListener('click', gameBoard.fillSquare);
+        square.removeEventListener('click', fillSquare);
 
         gameBoard.player.choice(gameBoard.player, square);
         gameBoard.turn += 1;
-        gameBoard.checkBoard(gameBoard.player)
+        gameFlow.checkBoard(gameBoard.player)
 
-        gameBoard.computer.choice(gameBoard.computer, gameBoard.selectSquare());
+        gameBoard.computer.choice(gameBoard.computer, gameAI.selectSquare());
         gameBoard.turn += 1;
-        gameBoard.checkBoard(gameBoard.computer);
+        gameFlow.checkBoard(gameBoard.computer);
     }
 
     let activateSquares = () => {
         if (gameBoard.turn === 0){
             gameBoard.squares.forEach((square) => {
                 square.style.color = '#000';
-                square.addEventListener('click', gameBoard.fillSquare);
+                square.addEventListener('click', fillSquare);
             })
         }
     }
     return {fillSquare, activateSquares};
-}
+})();
 
-// selects an index then
-let gameAI = () => {
-    let squares = document.querySelectorAll('.square');
-    let empty = false;
+let gameAI = (() => {
+
     let rng = (options) => {
         let idx = Math.floor(Math.random() * options.length);
-        return squares[options[idx]];
+        return gameBoard.squares[options[idx]];
     }
 
     let twoXrow = () => {
@@ -65,14 +94,15 @@ let gameAI = () => {
         return false;
     }
 
+    // public
     let selectSquare = () => {
 
         let block = twoXrow();
-        if (squares[4].innerHTML === ''){
-            result = squares[4];
+        if (gameBoard.squares[4].innerHTML === ''){
+            result = gameBoard.squares[4];
         }
         else if (block >= 0){
-            result = squares[block]; // not lucky
+            result = gameBoard.squares[block]; // not lucky
         }
         else if (emptyCorner()){
             result = rng(gameBoard.corners);
@@ -82,47 +112,15 @@ let gameAI = () => {
         }
 
         if (gameBoard.gameOver !== true){    
-            result.removeEventListener('click', gameBoard.fillSquare);
+            result.removeEventListener('click', boardSquares.fillSquare);
             return result;
         }
     }
 
     return{selectSquare};
-}
+})();
 
-
-let Player = (name, letter, color) => {
-    let board = new Array(9);
-    let declareWinner = (tie = 0) =>{
-        container.appendChild(display);
-        if (tie === 0){
-            textbox.innerHTML = `${name} has won the game!`
-        } else{
-            textbox.innerHTML = "It's a tie game!";
-        }
-    }
-
-    let choice = (self, square) => {
-        if (gameBoard.gameOver === false){
-            console.log(letter + " : " + square.id);
-            square.innerHTML = letter;
-            square.style.color = color;
-            self.board[square.id] = letter;
-            gameBoard.board[square.id] = letter;
-            // remove this square from global freeSpots array
-            let idx = gameBoard.freeSpots.indexOf(parseInt(square.id));
-            gameBoard.freeSpots.splice(idx, 1);
-            if (square.id % 2 === 0 && square.id !== 4){ // is a corner
-                idx = gameBoard.corners.indexOf(parseInt(square.id));
-                gameBoard.corners.splice(idx, 1);
-            }  
-        }
-    }
-    board.fill('');
-    return {name, letter, color, board, choice, declareWinner};
-}
-
-let gameFlow = () => {
+let gameFlow = (() => {
     
     let checkBoard = (side) => {
         let values = side.board;
@@ -152,12 +150,12 @@ let gameFlow = () => {
             gameBoard.gameOver = false;
             gameBoard.turn = 0;
             container.removeChild(display);
-            gameBoard.activateSquares();
+            boardSquares.activateSquares();
         }
     }
 
     return {checkBoard, reset};
-}
+})();
 
 
 let gameBoard = (() => {
@@ -173,13 +171,7 @@ let gameBoard = (() => {
                      [0,3,6], [1,4,7], [2,5,8],
                      [0,4,8], [2,4,6]];
     let corners = [0, 2, 6, 8];
-
     let squares = document.querySelectorAll('.square');
-    let {fillSquare} = boardSquares();
-    let {activateSquares} = boardSquares();    
-    let {checkBoard} = gameFlow();
-    let {selectSquare} = gameAI();
-    let {reset} = gameFlow();
 
     return {gameOver, 
             board,
@@ -189,16 +181,11 @@ let gameBoard = (() => {
             turn, 
             triplets,
             corners,
-            squares, 
-            checkBoard, 
-            activateSquares,
-            selectSquare,
-            fillSquare,
-            reset};
+            squares}; 
 })();
 
 
-gameBoard.activateSquares();
+boardSquares.activateSquares();
 
 // HTML for new game
 let container = document.querySelector('.container');
@@ -209,6 +196,6 @@ display.id = 'display';
 textbox.id = 'textbox';
 again.id = 'again';
 again.innerHTML = 'Play again?';
-again.addEventListener('click', gameBoard.reset);
+again.addEventListener('click', gameFlow.reset);
 display.appendChild(textbox);
 display.appendChild(again);
